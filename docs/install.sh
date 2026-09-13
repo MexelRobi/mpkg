@@ -12,7 +12,7 @@ GITHUB_BRANCH="main"
 
 INSTALL_PATH="/usr/local/bin/mpkg"
 
-REPO_RAW="https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
+REPO_RAW="https://githubusercontent.com{GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
 
 TEMP_FILE="/tmp/mpkg-install-$$"
 
@@ -44,7 +44,9 @@ ask() {
 
     echo ""
     echo -e "${YELLOW}${BOLD}${question}${RESET}"
-    read -r -p "Continue? (y/N): " answer
+    
+    # FIX: Liest Eingaben direkt vom Terminal, auch wenn das Skript per Pipe (| bash) läuft
+    read -r -p "Continue? (y/N): " answer < /dev/tty
 
     case "$answer" in
         y|Y|yes|YES)
@@ -94,7 +96,7 @@ command -v python3 >/dev/null 2>&1 || \
 echo "Checking available mpkg versions..."
 
 RELEASE_INDEX=$(curl -fsSL \
-    "https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/release" \
+    "https://github.com{GITHUB_USER}/${GITHUB_REPO}/contents/release" \
 ) || error "Could not access the GitHub repository."
 
 
@@ -207,6 +209,10 @@ fi
 # Make temporary binary executable.
 chmod +x "$TEMP_FILE"
 
+
+# FIX: macOS Quarantine vorab temporär für die Validierung entfernen.
+# Unsignierte Binärdateien blockieren sonst den "--version"-Check.
+xattr -d com.apple.quarantine "$TEMP_FILE" 2>/dev/null || true
 
 # Check that it is actually executable.
 if ! "$TEMP_FILE" --version >/dev/null 2>&1; then
