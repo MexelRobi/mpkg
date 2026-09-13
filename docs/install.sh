@@ -12,7 +12,11 @@ GITHUB_BRANCH="main"
 
 INSTALL_PATH="/usr/local/bin/mpkg"
 
+# Raw GitHub base URL
 REPO_RAW="https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
+
+# GitHub API URL for release directory
+RELEASE_API="https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/release?ref=${GITHUB_BRANCH}"
 
 TEMP_FILE="/tmp/mpkg-install-$$"
 
@@ -44,8 +48,10 @@ ask() {
 
     echo ""
     echo -e "${YELLOW}${BOLD}${question}${RESET}"
-    
-    # FIX: Liest Eingaben direkt vom Terminal, auch wenn das Skript per Pipe (| bash) läuft
+
+    # Read directly from terminal.
+    # This also works when the installer is executed through:
+    # curl ... | bash
     read -r -p "Continue? (y/N): " answer < /dev/tty
 
     case "$answer" in
@@ -96,12 +102,11 @@ command -v python3 >/dev/null 2>&1 || \
 echo "Checking available mpkg versions..."
 
 RELEASE_INDEX=$(curl -fsSL \
-    "https://github.com/${GITHUB_USER}/${GITHUB_REPO}/contents/release" \
+    "$RELEASE_API" \
 ) || error "Could not access the GitHub repository."
 
 
-LATEST_VERSION=$(echo "$RELEASE_INDEX" |
-    python3 -c '
+LATEST_VERSION=$(echo "$RELEASE_INDEX" | python3 -c '
 import json
 import sys
 import re
@@ -117,22 +122,33 @@ try:
 
         name = item.get("name", "")
 
-        if re.fullmatch(r"\d+(?:\.\d+)*", name):
+        # Accept versions such as:
+        # 1.0
+        # 1.1
+        # 1.2
+        # 2.0
+        # 10.5
+        if re.fullmatch(r"\d+\.\d+", name):
             versions.append(name)
-
-    def version_key(v):
-        return tuple(int(x) for x in v.split("."))
 
     if not versions:
         sys.exit(1)
 
-    print(max(versions, key=version_key))
+    def version_key(version):
+        return tuple(int(x) for x in version.split("."))
+
+    latest = max(versions, key=version_key)
+
+    print(latest)
 
 except Exception:
     sys.exit(1)
-'
-) || error "No valid mpkg version was found."
+') || error "No valid mpkg version was found."
 
+
+# ============================================================
+# Build download URL
+# ============================================================
 
 BINARY_URL="${REPO_RAW}/release/${LATEST_VERSION}/mpkg"
 
@@ -210,11 +226,23 @@ fi
 chmod +x "$TEMP_FILE"
 
 
-# FIX: macOS Quarantine vorab temporär für die Validierung entfernen.
-# Unsignierte Binärdateien blockieren sonst den "--version"-Check.
-xattr -d com.apple.quarantine "$TEMP_FILE" 2>/dev/null || true
+# ============================================================
+# macOS quarantine
+# ============================================================
 
-# Check that it is actually executable.
+# Remove quarantine from downloaded binary if present.
+# This is harmless on systems where xattr/quarantine
+# is not available.
+
+if command -v xattr >/dev/null 2>&1; then
+    xattr -d com.apple.quarantine "$TEMP_FILE" 2>/dev/null || true
+fi
+
+
+# ============================================================
+# Verify binary
+# ============================================================
+
 if ! "$TEMP_FILE" --version >/dev/null 2>&1; then
 
     echo ""
@@ -233,6 +261,7 @@ fi
 echo ""
 echo -e "${CYAN}${BOLD}Installation Preview${RESET}"
 echo ""
+
 echo "Action:       ${MODE}"
 echo "Version:      ${LATEST_VERSION}"
 echo "Source:       ${BINARY_URL}"
@@ -255,14 +284,17 @@ sudo cp "$TEMP_FILE" "$INSTALL_PATH"
 
 sudo chmod 755 "$INSTALL_PATH"
 
+
 # Remove macOS quarantine if present.
-sudo xattr -d com.apple.quarantine \
-    "$INSTALL_PATH" \
-    2>/dev/null || true
+if command -v xattr >/dev/null 2>&1; then
+    sudo xattr -d com.apple.quarantine \
+        "$INSTALL_PATH" \
+        2>/dev/null || true
+fi
 
 
 # ============================================================
-# Verify
+# Verify installation
 # ============================================================
 
 if [ ! -x "$INSTALL_PATH" ]; then
@@ -277,13 +309,9 @@ fi
 echo ""
 
 if [ "$MODE" = "update" ]; then
-
     echo -e "${GREEN}${BOLD}SUCCESS: mpkg updated to ${LATEST_VERSION}.${RESET}"
-
 else
-
     echo -e "${GREEN}${BOLD}SUCCESS: mpkg ${LATEST_VERSION} installed.${RESET}"
-
 fi
 
 echo ""
