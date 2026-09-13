@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>mpkg — macOS Package Manager</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        margin: 0;
+        background: #0d1117;
+        color: #e6edf3;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                     Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .container {
+        width: min(1000px, calc(100% - 40px));
+        margin: auto;
+    }
+
+    header {
+        padding: 90px 0 70px;
+        border-bottom: 1px solid #30363d;
+    }
+
+    .logo {
+        font-size: 64px;
+        font-weight: 800;
+        letter-spacing: -3px;
+        margin-bottom: 15px;
+    }
+
+    .tagline {
+        font-size: 22px;
+        color: #8b949e;
+        max-width: 650px;
+        line-height: 1.5;
+    }
+
+    .install-box {
+        margin-top: 40px;
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .install-header {
+        padding: 12px 18px;
+        border-bottom: 1px solid #30363d;
+        color: #8b949e;
+        font-size: 14px;
+    }
+
+    .command {
+        padding: 22px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 15px;
+        overflow-x: auto;
+        white-space: nowrap;
+        color: #e6edf3;
+    }
+
+    .prompt {
+        color: #58a6ff;
+    }
+
+    main {
+        padding: 70px 0;
+    }
+
+    section {
+        margin-bottom: 65px;
+    }
+
+    h2 {
+        font-size: 30px;
+        margin-bottom: 18px;
+    }
+
+    p {
+        color: #8b949e;
+        line-height: 1.7;
+        font-size: 16px;
+    }
+
+    pre {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-x: auto;
+        color: #e6edf3;
+    }
+
+    code {
+        font-family: "SFMono-Regular", Consolas, monospace;
+    }
+
+    .features {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    .feature {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 25px;
+    }
+
+    .feature h3 {
+        margin-top: 0;
+        font-size: 19px;
+    }
+
+    footer {
+        border-top: 1px solid #30363d;
+        padding: 30px 0;
+        color: #8b949e;
+        font-size: 14px;
+    }
+
+    a {
+        color: #58a6ff;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 700px) {
+        header {
+            padding: 60px 0 50px;
+        }
+
+        .logo {
+            font-size: 48px;
+        }
+
+        .features {
+            grid-template-columns: 1fr;
+        }
+
+        .command {
+            font-size: 13px;
+        }
+    }
+</style>
+
+</head>
+
+<body>
+
+<header>
+    <div class="container">
+
+    <div class="logo">mpkg</div>
+
+    <div class="tagline">
+        A simple package manager for macOS.
+        Install, update and manage software directly from Git repositories.
+    </div>
+
+    <div class="install-box">
+
+        <div class="install-header">
+            Install mpkg
+        </div>
+
+        <div class="command">
+            <span class="prompt">$</span>
+            curl -fsSL https://mexelrobi.github.io/mpkg/install.sh | bash
+        </div>
+
+    </div>
+
+</div>
+
+</header>
+
+<main>
+
+<div class="container">
+
+    <section>
+
+        <h2>Simple package management</h2>
+
+        <p>
+            mpkg provides a lightweight way to install and manage
+            packages on macOS. Packages are distributed through
+            Git repositories and installed directly on your system.
+        </p>
+
+    </section>
+
+
+    <section>
+
+        <h2>Install</h2>
+
+        <p>
+            Install or update mpkg with a single command:
+        </p>
+
+        <pre><code>curl -fsSL https://mexelrobi.github.io/mpkg/install.sh | bash</code></pre>
+
+    </section>
+
+
+    <section>
+
+        <h2>Features</h2>
+
+        <div class="features">
+
+            <div class="feature">
+                <h3>Simple</h3>
+                <p>
+                    One command to install mpkg.
+                    No complicated setup.
+                </p>
+            </div>
+
+            <div class="feature">
+                <h3>Updates</h3>
+                <p>
+                    The installer automatically uses
+                    the newest available mpkg version.
+                </p>
+            </div>
+
+            <div class="feature">
+                <h3>Safe</h3>
+                <p>
+                    Package installations are checked for
+                    protected paths and file conflicts.
+                </p>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <section>
+
+        <h2>Usage</h2>
+
+        <pre><code># Install a package
+
+sudo mpkg -i user/repository
+
+# Update an installed package
+
+sudo mpkg -i user/repository
+
+# Remove a package
+
+sudo mpkg -u user/repository
+
+# List installed packages
+
+sudo mpkg -l
+
+# Clean installed packages
+
+sudo mpkg -clean</code></pre>
+
+    </section>
+
+</div>
+
+</main>
+
+<footer>
+
+<div class="container">
+    mpkg ·
+    <a href="https://github.com/MexelRobi/mpkg">
+        GitHub
+    </a>
+</div>
+
+</footer>
+
+</body>
+</html>
+

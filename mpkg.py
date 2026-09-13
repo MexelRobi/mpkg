@@ -13,9 +13,9 @@ import subprocess
 
 DB_PATH = "/usr/local/var/mpkg/registry.json"
 CACHE_DIR = "/usr/local/var/mpkg/cache"
+MPKG_DIR = "/usr/local/var/mpkg"
 
 # Directories that are NEVER allowed to be modified.
-# These cannot be overridden by normal package installation.
 BLACKLIST = [
     "/System",
     "/bin",
@@ -27,7 +27,6 @@ BLACKLIST = [
 ]
 
 # Sensitive directories.
-# Installation is possible, but the user must explicitly approve it.
 ASK_LIST = [
     "/Applications",
     "/Library",
@@ -36,7 +35,6 @@ ASK_LIST = [
 ]
 
 # mpkg's own files.
-# Modifying these requires explicit confirmation.
 MPKG_PROTECTED = [
     DB_PATH,
     CACHE_DIR,
@@ -83,22 +81,17 @@ def print_error(msg, exit_code=1):
 def normalize_path(path):
     """
     Convert a path into a canonical absolute path.
-
-    This is used for every destination comparison.
     """
-    return os.path.realpath(os.path.abspath(os.path.normpath(path)))
+    return os.path.realpath(
+        os.path.abspath(
+            os.path.normpath(path)
+        )
+    )
 
 
 def has_traversal(path):
     """
-    Reject path components such as:
-        .
-        ..
-        foo/../bar
-        ../something
-
-    We intentionally reject them even when they would technically
-    resolve to a safe path.
+    Reject unsafe path components.
     """
     if not isinstance(path, str):
         return True
@@ -106,13 +99,10 @@ def has_traversal(path):
     if "\x00" in path:
         return True
 
-    # Backslashes are not valid path separators on macOS,
-    # but rejecting them avoids ambiguity between package formats.
     if "\\" in path:
         return True
 
     if os.path.isabs(path):
-        # Absolute paths inside the package are not allowed.
         return True
 
     components = path.replace(os.sep, "/").split("/")
@@ -126,7 +116,7 @@ def has_traversal(path):
 
 def is_same_or_inside(path, directory):
     """
-    True if path is the directory itself or is located below it.
+    True if path is the directory itself or located below it.
     """
     path = normalize_path(path)
     directory = normalize_path(directory)
@@ -161,7 +151,6 @@ def check_path_security(dest):
         ("OK", None)
     """
 
-    # Destination must always be absolute after construction.
     if not os.path.isabs(dest):
         return "BLOCKED", "Destination path is not absolute."
 
@@ -211,8 +200,15 @@ def check_path_security(dest):
 # ============================================================
 
 def init_system():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    os.makedirs(CACHE_DIR, exist_ok=True)
+    os.makedirs(
+        os.path.dirname(DB_PATH),
+        exist_ok=True
+    )
+
+    os.makedirs(
+        CACHE_DIR,
+        exist_ok=True
+    )
 
     if not os.path.exists(DB_PATH):
         with open(DB_PATH, "w") as f:
@@ -253,8 +249,6 @@ def save_db(db):
 def find_file_owner(path, db, ignore_repo=None):
     """
     Find which installed package owns a specific path.
-
-    The same package can be ignored during updates.
     """
     path = normalize_path(path)
 
@@ -264,6 +258,7 @@ def find_file_owner(path, db, ignore_repo=None):
             continue
 
         for owned_file in info.get("files", []):
+
             try:
                 owned_file = normalize_path(owned_file)
             except Exception:
@@ -278,15 +273,7 @@ def find_file_owner(path, db, ignore_repo=None):
 def find_conflicts(files_to_copy, db, current_repo=None):
     """
     Detect package-to-package file conflicts.
-
-    Example:
-
-        Package A -> /usr/local/bin/testcommand
-        Package B -> /usr/local/bin/testcommand
-
-    B is rejected and A is reported as the owner.
     """
-
     conflicts = []
 
     for src, dest in files_to_copy:
@@ -312,6 +299,7 @@ def print_conflicts(conflicts, incoming_repo):
     print()
 
     for conflict in conflicts:
+
         print(
             f"{RED}[CONFLICT]{RESET} "
             f"{conflict['path']}"
@@ -348,8 +336,13 @@ def analyze_package(pkg_source_dir):
     ):
 
         # Reject symlinked directories.
+
         for directory in list(dirs):
-            full_dir = os.path.join(root, directory)
+
+            full_dir = os.path.join(
+                root,
+                directory
+            )
 
             if os.path.islink(full_dir):
                 print_error(
@@ -358,9 +351,13 @@ def analyze_package(pkg_source_dir):
 
         for file in files:
 
-            src_path = os.path.join(root, file)
+            src_path = os.path.join(
+                root,
+                file
+            )
 
             # Reject symlinked files.
+
             if os.path.islink(src_path):
                 print_error(
                     f"Package contains a symlinked file: {src_path}"
@@ -371,16 +368,13 @@ def analyze_package(pkg_source_dir):
                 pkg_source_dir
             )
 
-            # ------------------------------------------------
             # Path traversal protection
-            # ------------------------------------------------
 
             if has_traversal(rel_path):
                 print_error(
                     f"Unsafe package path detected: {rel_path}"
                 )
 
-            # Extra normalization check.
             normalized_rel = os.path.normpath(rel_path)
 
             if normalized_rel != rel_path:
@@ -389,18 +383,29 @@ def analyze_package(pkg_source_dir):
                 )
 
             # Destination always starts at filesystem root.
+
             dest_path = normalize_path(
-                os.path.join("/", rel_path)
+                os.path.join(
+                    "/",
+                    rel_path
+                )
             )
 
             # Prevent escaping /
-            if not is_same_or_inside(dest_path, "/"):
+
+            if not is_same_or_inside(
+                dest_path,
+                "/"
+            ):
                 print_error(
                     f"Package path escapes filesystem root: {rel_path}"
                 )
 
             files_to_copy.append(
-                (src_path, dest_path)
+                (
+                    src_path,
+                    dest_path
+                )
             )
 
     return files_to_copy
@@ -411,19 +416,27 @@ def analyze_package(pkg_source_dir):
 # ============================================================
 
 def uninstall_package(repo, silent=False):
+
     if not silent:
-        print_header(f"Uninstalling {repo}")
+        print_header(
+            f"Uninstalling {repo}"
+        )
 
     db = load_db()
 
     if repo not in db:
+
         if not silent:
             print_error(
                 f"Package '{repo}' is not installed."
             )
+
         return False
 
-    files = db[repo].get("files", [])
+    files = db[repo].get(
+        "files",
+        []
+    )
 
     for file in files:
 
@@ -432,27 +445,35 @@ def uninstall_package(repo, silent=False):
         if os.path.exists(file):
 
             try:
-                # Do not accidentally remove protected system paths.
+
+                # Never accidentally remove protected system paths.
+
                 security, reason = check_path_security(file)
 
                 if security == "BLOCKED":
+
                     if not silent:
                         print(
                             f"{RED}Blocked removal: {file}{RESET}"
                         )
+
                     continue
 
                 os.remove(file)
 
                 if not silent:
-                    print(f"Removed: {file}")
+                    print(
+                        f"Removed: {file}"
+                    )
 
                 # Remove empty directories upwards.
+
                 dirname = os.path.dirname(file)
 
                 while dirname != "/":
 
                     # Never delete protected directories.
+
                     if path_in_list(
                         dirname,
                         BLACKLIST + MPKG_PROTECTED
@@ -460,6 +481,7 @@ def uninstall_package(repo, silent=False):
                         break
 
                     try:
+
                         if not os.path.isdir(dirname):
                             break
 
@@ -494,6 +516,7 @@ def uninstall_package(repo, silent=False):
                 )
 
     del db[repo]
+
     save_db(db)
 
     if not silent:
@@ -517,15 +540,21 @@ def install_package(repo, noclean=False):
     # --------------------------------------------------------
 
     if not isinstance(repo, str):
-        print_error("Invalid repository name.")
+        print_error(
+            "Invalid repository name."
+        )
 
     repo = repo.strip()
 
     if not repo:
-        print_error("Repository name cannot be empty.")
+        print_error(
+            "Repository name cannot be empty."
+        )
 
     if repo.startswith("-"):
-        print_error("Invalid repository name.")
+        print_error(
+            "Invalid repository name."
+        )
 
     if repo.count("/") != 1:
         print_error(
@@ -539,6 +568,7 @@ def install_package(repo, noclean=False):
     is_update = repo in db
 
     if is_update:
+
         print(
             f"{BLUE}-> Package '{repo}' is already installed."
             f"{RESET}"
@@ -557,7 +587,9 @@ def install_package(repo, noclean=False):
     # Clone repository into cache
     # --------------------------------------------------------
 
-    repo_url = f"https://github.com/{repo}.git"
+    repo_url = (
+        f"https://github.com/{repo}.git"
+    )
 
     target_cache = os.path.join(
         CACHE_DIR,
@@ -572,6 +604,7 @@ def install_package(repo, noclean=False):
     )
 
     try:
+
         subprocess.run(
             [
                 "git",
@@ -587,6 +620,7 @@ def install_package(repo, noclean=False):
         )
 
     except subprocess.CalledProcessError:
+
         print_error(
             "Failed to clone repository. "
             "Check the repository name or network connection."
@@ -602,6 +636,7 @@ def install_package(repo, noclean=False):
     )
 
     if not os.path.isdir(pkg_source_dir):
+
         print_error(
             "The 'mpkg' directory was not found "
             "inside the repository."
@@ -621,6 +656,7 @@ def install_package(repo, noclean=False):
     )
 
     if os.path.islink(exec_script_src):
+
         print_error(
             "The 'mpkgexec' file must not be a symlink."
         )
@@ -646,6 +682,7 @@ def install_package(repo, noclean=False):
     )
 
     if not files_to_copy:
+
         print_error(
             "No files found inside the 'mpkg' directory."
         )
@@ -675,7 +712,6 @@ def install_package(repo, noclean=False):
                 f"           {reason}"
             )
 
-            # Entire installation is aborted.
             print_error(
                 "Installation aborted due to "
                 "blacklisted/unsafe path."
@@ -779,8 +815,7 @@ def install_package(repo, noclean=False):
         )
 
     # --------------------------------------------------------
-    # Update:
-    # Remove old version ONLY after all checks succeeded.
+    # Update
     # --------------------------------------------------------
 
     if is_update:
@@ -793,6 +828,7 @@ def install_package(repo, noclean=False):
             repo,
             silent=True
         ):
+
             print_error(
                 "Failed to remove previous package version."
             )
@@ -818,11 +854,14 @@ def install_package(repo, noclean=False):
         for src, dest in files_to_copy:
 
             # Re-check security immediately before writing.
+
             status, reason = check_path_security(dest)
 
             if status == "BLOCKED":
+
                 raise RuntimeError(
-                    f"Security check failed for {dest}: {reason}"
+                    f"Security check failed for "
+                    f"{dest}: {reason}"
                 )
 
             parent = os.path.dirname(dest)
@@ -840,6 +879,7 @@ def install_package(repo, noclean=False):
             installed_files.append(dest)
 
             # Remove macOS quarantine.
+
             subprocess.run(
                 [
                     "xattr",
@@ -901,8 +941,6 @@ def install_package(repo, noclean=False):
             f"{RED}Installation failed: {e}{RESET}"
         )
 
-        # Best-effort rollback of files belonging to
-        # this installation.
         print(
             f"{YELLOW}-> Rolling back installed files..."
             f"{RESET}"
@@ -913,8 +951,10 @@ def install_package(repo, noclean=False):
         ):
 
             try:
+
                 if os.path.isfile(installed):
                     os.remove(installed)
+
             except Exception:
                 pass
 
@@ -929,8 +969,8 @@ def install_package(repo, noclean=False):
     if has_exec_script:
 
         print(
-            f"-> Running post-install script "
-            f"(mpkgexec)..."
+            "-> Running post-install script "
+            "(mpkgexec)..."
         )
 
         try:
@@ -988,6 +1028,7 @@ def install_package(repo, noclean=False):
     )
 
     if is_update:
+
         print_success(
             f"Package {repo} was updated successfully."
         )
@@ -1032,6 +1073,32 @@ def list_packages():
 # Clean
 # ============================================================
 
+def get_manager_path():
+    """
+    Resolve the actual mpkg executable/script path.
+
+    The path must be an absolute path and must not be a
+    protected system path.
+    """
+
+    manager_path = normalize_path(
+        sys.argv[0]
+    )
+
+    if not os.path.isabs(manager_path):
+        return None
+
+    # Never allow clean to delete a system binary.
+
+    if path_in_list(
+        manager_path,
+        BLACKLIST
+    ):
+        return None
+
+    return manager_path
+
+
 def clean_all():
 
     print_header(
@@ -1040,50 +1107,299 @@ def clean_all():
 
     db = load_db()
 
+    # --------------------------------------------------------
+    # Determine manager path
+    # --------------------------------------------------------
+
+    manager_path = get_manager_path()
+
+    if not manager_path:
+
+        print_error(
+            "Could not safely determine the mpkg "
+            "manager path. Clean aborted."
+        )
+
+    # --------------------------------------------------------
+    # Build package list
+    # --------------------------------------------------------
+
     to_delete = []
 
-    for repo, info in list(db.items()):
+    protected_packages = []
+
+    for repo, info in db.items():
 
         if info.get("noclean"):
 
+            protected_packages.append(repo)
+
+        else:
+
+            to_delete.append(repo)
+
+    # --------------------------------------------------------
+    # Show destructive operation
+    # --------------------------------------------------------
+
+    print(
+        f"\n{RED}{BOLD}"
+        "WARNING: THIS WILL COMPLETELY REMOVE MPKG"
+        f"{RESET}"
+    )
+
+    print()
+
+    print(
+        f"{YELLOW}The following packages will be removed:{RESET}"
+    )
+
+    if to_delete:
+
+        for repo in to_delete:
+
             print(
-                f"Skipping {BLUE}{repo}{RESET} "
-                "(--noclean protected)"
+                f"  {RED}- {repo}{RESET}"
             )
 
-            continue
+    else:
 
         print(
-            f"Queueing {RED}{repo}{RESET} "
-            "for removal..."
+            "  None"
         )
 
-        to_delete.append(repo)
+    print()
+
+    print(
+        f"{GREEN}The following packages have --noclean "
+        f"and will NOT be removed:{RESET}"
+    )
+
+    if protected_packages:
+
+        for repo in protected_packages:
+
+            print(
+                f"  {GREEN}- {repo}{RESET}"
+            )
+
+    else:
+
+        print(
+            "  None"
+        )
+
+    print()
+
+    print(
+        f"{YELLOW}The mpkg manager itself will also be removed:{RESET}"
+    )
+
+    print(
+        f"  {manager_path}"
+    )
+
+    print()
+
+    print(
+        f"{RED}{BOLD}"
+        "This operation cannot be undone."
+        f"{RESET}"
+    )
+
+    # --------------------------------------------------------
+    # Security confirmation
+    # --------------------------------------------------------
+
+    confirmation = input(
+        "\nType 'CLEAN' to continue: "
+    ).strip()
+
+    if confirmation != "CLEAN":
+
+        print(
+            f"{YELLOW}Clean cancelled.{RESET}"
+        )
+
+        return
+
+    print()
+
+    # --------------------------------------------------------
+    # Remove normal packages
+    # --------------------------------------------------------
 
     for repo in to_delete:
+
+        print(
+            f"{BLUE}-> Removing {repo}...{RESET}"
+        )
 
         uninstall_package(
             repo,
             silent=True
         )
 
-    if os.path.exists(CACHE_DIR):
-
-        # CACHE_DIR itself is protected from package writes,
-        # but mpkg's own clean operation is allowed to remove it.
-        shutil.rmtree(CACHE_DIR)
-
         print(
-            "Cache cleared."
+            f"{GREEN}-> Removed {repo}{RESET}"
         )
 
-    os.makedirs(
-        CACHE_DIR,
-        exist_ok=True
+    # --------------------------------------------------------
+    # Reload database after package removal
+    # --------------------------------------------------------
+
+    try:
+        db = load_db()
+    except SystemExit:
+        db = {}
+
+    # --------------------------------------------------------
+    # Remove cache
+    # --------------------------------------------------------
+
+    if os.path.exists(CACHE_DIR):
+
+        try:
+
+            shutil.rmtree(
+                CACHE_DIR
+            )
+
+            print(
+                f"{GREEN}-> Cache removed.{RESET}"
+            )
+
+        except Exception as e:
+
+            print(
+                f"{YELLOW}WARNING: Could not remove "
+                f"cache: {e}{RESET}"
+            )
+
+    # --------------------------------------------------------
+    # Remove registry
+    # --------------------------------------------------------
+
+    if os.path.exists(DB_PATH):
+
+        try:
+
+            os.remove(
+                DB_PATH
+            )
+
+            print(
+                f"{GREEN}-> Registry removed.{RESET}"
+            )
+
+        except Exception as e:
+
+            print(
+                f"{YELLOW}WARNING: Could not remove "
+                f"registry: {e}{RESET}"
+            )
+
+    # --------------------------------------------------------
+    # Remove temporary registry
+    # --------------------------------------------------------
+
+    temp_db = DB_PATH + ".tmp"
+
+    if os.path.exists(temp_db):
+
+        try:
+
+            os.remove(
+                temp_db
+            )
+
+        except Exception:
+            pass
+
+    # --------------------------------------------------------
+    # Remove mpkg data directory if empty
+    # --------------------------------------------------------
+
+    if os.path.isdir(MPKG_DIR):
+
+        try:
+
+            if not os.listdir(MPKG_DIR):
+
+                os.rmdir(
+                    MPKG_DIR
+                )
+
+                print(
+                    f"{GREEN}-> mpkg data directory removed."
+                    f"{RESET}"
+                )
+
+        except OSError:
+            pass
+
+    # --------------------------------------------------------
+    # Self-uninstall
+    # --------------------------------------------------------
+
+    print()
+
+    print(
+        f"{BLUE}-> Removing mpkg manager:"
+        f"{RESET} {manager_path}"
     )
 
+    # Final safety check before self deletion.
+
+    manager_path = normalize_path(
+        manager_path
+    )
+
+    if path_in_list(
+        manager_path,
+        BLACKLIST
+    ):
+
+        print_error(
+            "Final safety check failed. "
+            "Manager was NOT removed."
+        )
+
+    try:
+
+        if not os.path.isfile(manager_path):
+
+            print_error(
+                "Manager executable was not found. "
+                "Self-uninstall aborted."
+            )
+
+        os.remove(
+            manager_path
+        )
+
+    except Exception as e:
+
+        print_error(
+            f"Could not remove mpkg manager: {e}"
+        )
+
+    print()
+
     print_success(
-        "Clean operation finished."
+        "mpkg has been completely removed."
+    )
+
+    if protected_packages:
+
+        print(
+            f"\n{GREEN}"
+            "Packages protected by --noclean were left installed."
+            f"{RESET}"
+        )
+
+    print(
+        "\nGoodbye."
     )
 
 
