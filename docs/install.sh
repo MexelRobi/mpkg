@@ -12,7 +12,7 @@ GITHUB_BRANCH="main"
 
 INSTALL_PATH="/usr/local/bin/mpkg"
 
-REPO_RAW="https://githubusercontent.com{GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
+REPO_RAW="https://githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
 
 TEMP_FILE="/tmp/mpkg-install-$$"
 
@@ -96,7 +96,7 @@ command -v python3 >/dev/null 2>&1 || \
 echo "Checking available mpkg versions..."
 
 RELEASE_INDEX=$(curl -fsSL \
-    "https://github.com{GITHUB_USER}/${GITHUB_REPO}/contents/release" \
+    "https://github.com/${GITHUB_USER}/${GITHUB_REPO}/contents/release" \
 ) || error "Could not access the GitHub repository."
 
 
