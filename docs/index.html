@@ -14,11 +14,13 @@
 
     html {
         scroll-behavior: smooth;
+        user-select: none;
     }
 
     body {
         margin: 0;
-        background: #0d1117;
+        user-select: none;
+        background: radial-gradient(1200px 800px at 0% 0%, #0f1730 4%, #0b1226 40%, #070e1f 100%);
         color: #e6edf3;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
                      Roboto, Helvetica, Arial, sans-serif;
@@ -56,6 +58,35 @@
         overflow: hidden;
     }
 
+    .install-row { display: flex; align-items: stretch; }
+    .command { 
+        flex: 1; 
+        padding: 22px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-size: 15px;
+        overflow-x: auto;
+        white-space: nowrap;
+        color: #e6edf3;
+        user-select: none;
+    }
+    .copy-btn { 
+        background: transparent; 
+        border: none; 
+        color: #58a6ff; 
+        padding: 0 14px; 
+        font-size: 18px; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+    }
+    .copy-btn:hover { color: #9cd1ff; }
+    .copy-btn:active { color: #6ab7ff; }
+    .copy-btn:disabled { opacity: 0.6; }
+    .copy-btn, .command { display: flex; align-items: center; }
+    .copy-btn { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+    .install-box { border-radius: 10px; overflow: hidden; }
+
     .install-header {
         padding: 12px 18px;
         border-bottom: 1px solid #30363d;
@@ -63,18 +94,21 @@
         font-size: 14px;
     }
 
-    .command {
-        padding: 22px;
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-        font-size: 15px;
-        overflow-x: auto;
-        white-space: nowrap;
-        color: #e6edf3;
+    .prompt {
+        color: #79c0ff; 
+        user-select: none;
     }
 
-    .prompt {
-        color: #58a6ff;
-    }
+    .hl-comment { color: #8b949e; }
+    .hl-flag { color: #ff8a8a; }
+    .hl-action { color: #6fdd8b; }
+.hl-sudo { color: #ffffff; }
+.hl-curl { color: #ffffff; }
+.hl-mpkg { color: #79c0ff; }
+.hl-flag-i { color: #8ef0a6; }
+.hl-flag-u { color: #ff6b6b; }
+.hl-flag-l { color: #9aa0a6; }
+.hl-flag-clean { color: #c23b3b; }
 
     main {
         padding: 70px 0;
@@ -181,9 +215,12 @@
             Install mpkg
         </div>
 
-        <div class="command">
-            <span class="prompt">$</span>
-            curl -fsSL https://mexelrobi.github.io/mpkg/install.sh | bash
+        <div class="install-row">
+            <div class="command" id="install-command">
+                <span class="prompt" aria-hidden="true">$&nbsp;</span>
+                <span class="cmd-text"><span class="hl-curl">curl</span> <span class="hl-flag">-fsSL</span> https://mexelrobi.github.io/mpkg/install.sh | bash</span>
+            </div>
+            <button class="copy-btn" id="copy-install" aria-label="Copy install command" title="Copy">⧉</button>
         </div>
 
     </div>
@@ -217,7 +254,10 @@
             Install or update mpkg with a single command:
         </p>
 
-        <pre><code>curl -fsSL https://mexelrobi.github.io/mpkg/install.sh | bash</code></pre>
+        <div class="install-row" style="margin-top:10px;">
+            <pre style="flex:1; margin:0;"><code id="install-code"><span class="hl-curl">curl</span> <span class="hl-flag">-fsSL</span> https://mexelrobi.github.io/mpkg/install.sh | bash</code></pre>
+            <button class="copy-btn" id="copy-install-2" aria-label="Copy install command" title="Copy">⧉</button>
+        </div>
 
     </section>
 
@@ -261,25 +301,25 @@
 
         <h2>Usage</h2>
 
-        <pre><code># Install a package
+        <pre><code># <span class="hl-comment">Install a package</span>
 
-sudo mpkg -i user/repository
+<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-i">-i</span> user/repository
 
-# Update an installed package
+# <span class="hl-comment">Update an installed package</span>
 
-sudo mpkg -i user/repository
+<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-i">-i</span> user/repository
 
-# Remove a package
+# <span class="hl-comment">Remove a package</span>
 
-sudo mpkg -u user/repository
+<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-u">-u</span> user/repository
 
-# List installed packages
+# <span class="hl-comment">List installed packages</span>
 
-sudo mpkg -l
+<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-l">-l</span>
 
-# Clean installed packages
+# <span class="hl-comment">Uninstall mpkg and delete installed packages that do not have the noclean flag</span>
 
-sudo mpkg -clean</code></pre>
+<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-clean">-clean</span></code></pre>
 
     </section>
 
@@ -298,6 +338,51 @@ sudo mpkg -clean</code></pre>
 
 </footer>
 
+<script>
+(function() {
+    function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+            return Promise.resolve();
+        }
+    }
+
+    function setTempLabel(btn, label) {
+        const oldLabel = btn.getAttribute('aria-label') || '';
+        btn.setAttribute('aria-label', label);
+        btn.disabled = true;
+        setTimeout(() => { btn.setAttribute('aria-label', oldLabel); btn.disabled = false; }, 1200);
+    }
+
+    const btn1 = document.getElementById('copy-install');
+    const cmdEl = document.querySelector('#install-command .cmd-text');
+    if (btn1 && cmdEl) {
+        btn1.addEventListener('click', () => {
+            const text = cmdEl.textContent.trim();
+            copyText(text).then(() => setTempLabel(btn1, 'Copied')).catch(() => setTempLabel(btn1, 'Error'));
+        });
+    }
+
+    const btn2 = document.getElementById('copy-install-2');
+    const codeEl = document.getElementById('install-code');
+    if (btn2 && codeEl) {
+        btn2.addEventListener('click', () => {
+            const text = codeEl.textContent.trim();
+            copyText(text).then(() => setTempLabel(btn2, 'Copied')).catch(() => setTempLabel(btn2, 'Error'));
+        });
+    }
+})();
+</script>
+
 </body>
 </html>
-
