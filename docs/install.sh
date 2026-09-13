@@ -12,7 +12,7 @@ GITHUB_BRANCH="main"
 
 INSTALL_PATH="/usr/local/bin/mpkg"
 
-REPO_RAW="https://githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
+REPO_RAW="https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}"
 
 TEMP_FILE="/tmp/mpkg-install-$$"
 
