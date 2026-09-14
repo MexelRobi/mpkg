@@ -1098,6 +1098,40 @@ def get_manager_path():
 
     return manager_path
 
+def clean_cache():
+
+    print_header(
+        "Cleaning mpkg Cache"
+    )
+
+    if not os.path.exists(CACHE_DIR):
+
+        print(
+            "Cache does not exist."
+        )
+
+        return
+
+    try:
+
+        shutil.rmtree(
+            CACHE_DIR
+        )
+
+        os.makedirs(
+            CACHE_DIR,
+            exist_ok=True
+        )
+
+        print_success(
+            "mpkg cache has been completely cleared."
+        )
+
+    except Exception as e:
+
+        print_error(
+            f"Could not remove cache: {e}"
+        )
 
 def clean_all():
 
@@ -1402,6 +1436,84 @@ def clean_all():
         "\nGoodbye."
     )
 
+# ============================================================
+# Update All
+# ============================================================
+
+def update_all():
+
+    print_header(
+        "Updating All Packages"
+    )
+
+    db = load_db()
+
+    if not db:
+
+        print(
+            "No packages installed."
+        )
+
+        return
+
+    # --------------------------------------------------------
+    # Create a snapshot of installed packages.
+    # This is important because install_package() modifies
+    # the registry during the update.
+    # --------------------------------------------------------
+
+    packages = []
+
+    for repo, info in db.items():
+
+        packages.append({
+            "repo": repo,
+            "noclean": bool(
+                info.get("noclean", False)
+            )
+        })
+
+    print(
+        f"\nFound {len(packages)} installed "
+        f"package(s).\n"
+    )
+
+    for package in packages:
+
+        repo = package["repo"]
+        noclean = package["noclean"]
+
+        print(
+            f"{BLUE}"
+            f"-> Updating {repo}"
+            f"{' [NO-CLEAN]' if noclean else ''}"
+            f"{RESET}"
+        )
+
+        try:
+
+            install_package(
+                repo,
+                noclean=noclean
+            )
+
+        except SystemExit as e:
+
+            # install_package() uses print_error(), which
+            # normally terminates the entire process.
+            # Keep the behavior consistent with the rest
+            # of mpkg.
+            raise e
+
+        print(
+            f"{GREEN}"
+            f"-> Finished updating {repo}"
+            f"{RESET}\n"
+        )
+
+    print_success(
+        "All installed packages have been updated."
+    )
 
 # ============================================================
 # CLI
@@ -1422,7 +1534,15 @@ def print_usage():
     )
 
     print(
+        "  mpkg -ua"
+    )
+
+    print(
         "  mpkg -l"
+    )
+
+    print(
+        "  mpkg -cc"
     )
 
     print(
@@ -1498,6 +1618,22 @@ def main():
         uninstall_package(
             repo
         )
+
+    # --------------------------------------------------------
+    # Update All
+    # --------------------------------------------------------
+
+    elif action == "-ua":
+
+        update_all()
+
+    # --------------------------------------------------------
+    # Clean Cache
+    # --------------------------------------------------------
+
+    elif action == "-cc":
+
+        clean_cache()
 
     # --------------------------------------------------------
     # List

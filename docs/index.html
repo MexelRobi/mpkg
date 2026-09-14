@@ -301,9 +301,9 @@
 
         <h2>Usage</h2>
 
-        <pre><code># <span class="hl-comment">Install a package</span>
+        <pre><code># <span class="hl-comment">Install a package (optional: with noclean flag)</span>
 
-<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-i">-i</span> user/repository
+<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-i">-i</span> user/repository [--noclean]
 
 # <span class="hl-comment">Update an installed package</span>
 
@@ -313,15 +313,24 @@
 
 <span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-u">-u</span> user/repository
 
+# <span class="hl-comment">Remove all packages</span>
+
+<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-ua">-ua</span>
+
 # <span class="hl-comment">List installed packages</span>
 
 <span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-l">-l</span>
+
+# <span class="hl-comment">Clear cache</span>
+
+<span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-cc">-cc</span>
 
 # <span class="hl-comment">Uninstall mpkg and delete installed packages that do not have the noclean flag</span>
 
 <span class="hl-sudo">sudo</span> <span class="hl-mpkg">mpkg</span> <span class="hl-flag-clean">-clean</span></code></pre>
 
     </section>
+
 
 </div>
 
